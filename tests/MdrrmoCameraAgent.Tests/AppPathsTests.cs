@@ -3,6 +3,7 @@ using MdrrmoCameraAgent;
 
 namespace MdrrmoCameraAgent.Tests;
 
+[Collection("SequentialIntegration")]
 public class AppPathsTests
 {
     [Fact]
