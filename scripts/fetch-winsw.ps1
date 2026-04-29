@@ -18,7 +18,10 @@ if (Test-Path $dest) {
 $tmp = Join-Path $env:TEMP "WinSW-x64_v$ver.exe"
 Invoke-WebRequest -Uri "https://github.com/winsw/winsw/releases/download/v$ver/WinSW-x64.exe" -OutFile $tmp
 $actual = (Get-FileHash $tmp -Algorithm SHA256).Hash.ToLower()
-if ($actual -ne $expectedSha) { throw "SHA mismatch: expected $expectedSha got $actual" }
+if ($actual -ne $expectedSha) {
+    Remove-Item $tmp -ErrorAction SilentlyContinue
+    throw "SHA mismatch: expected $expectedSha got $actual"
+}
 Copy-Item $tmp $dest -Force
 Remove-Item $tmp
 Write-Host "winsw.exe v$ver fetched and verified"
