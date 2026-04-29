@@ -47,15 +47,25 @@ public class ProvisioningLoaderTests
     }
 
     [Fact]
-    public void Load_ThrowsWhenHubBaseUrlMissing()
+    public void Load_AcceptsBundle_WithoutOptionalHubFields()
     {
+        // hub_base_url and jwks_url are optional (nullable); the loader must not throw when absent.
+        // B5 smoke-test fix: removed the hub_base_url required-field check so W0b bundles work before
+        // the MediaMTX hub is deployed.
         var path = Path.GetTempFileName();
-        File.WriteAllText(path, """{ "enrollment_token": "tok" }""");
+        File.WriteAllText(path, """
+            {
+              "enrollment_token":  "tok",
+              "supabase_url":      "https://xyz.supabase.co",
+              "supabase_anon_key": "anon-key"
+            }
+            """);
         try
         {
-            var act = () => ProvisioningLoader.LoadFromFile(path);
-            act.Should().Throw<InvalidDataException>()
-               .WithMessage("*hub_base_url*");
+            var bundle = ProvisioningLoader.LoadFromFile(path);
+            bundle.EnrollmentToken.Should().Be("tok");
+            bundle.HubBaseUrl.Should().BeNullOrEmpty();
+            bundle.JwksUrl.Should().BeNullOrEmpty();
         }
         finally { File.Delete(path); }
     }

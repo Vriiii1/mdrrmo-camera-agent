@@ -2,7 +2,7 @@ namespace MdrrmoCameraAgent;
 
 public static class AppPaths
 {
-    public static string Root { get; } =
+    public static string Root =>
         Environment.GetEnvironmentVariable("MDRRMO_AGENT_ROOT")
         ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
                         "MDRRMO", "CameraAgent");
