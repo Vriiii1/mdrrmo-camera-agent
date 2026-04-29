@@ -4,6 +4,7 @@ using MdrrmoCameraAgent.Backend;
 using MdrrmoCameraAgent.Config;
 using MdrrmoCameraAgent.Lifecycle;
 using MdrrmoCameraAgent.Storage;
+using Velopack;
 
 namespace MdrrmoCameraAgent;
 
@@ -20,6 +21,7 @@ public static class Program
     [SupportedOSPlatform("windows")]
     public static async Task<int> Main(string[] args)
     {
+        VelopackApp.Build().Run();
         Console.WriteLine($"{AgentName} v{ThisAssembly.Version}");
 
         using var cts = new CancellationTokenSource();
