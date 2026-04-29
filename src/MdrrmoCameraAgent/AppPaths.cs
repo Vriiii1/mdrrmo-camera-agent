@@ -3,8 +3,9 @@ namespace MdrrmoCameraAgent;
 public static class AppPaths
 {
     public static string Root { get; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-                     "MDRRMO", "CameraAgent");
+        Environment.GetEnvironmentVariable("MDRRMO_AGENT_ROOT")
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                        "MDRRMO", "CameraAgent");
 
     public static string CredsFile   => Path.Combine(Root, "creds.dpapi");
     public static string CamerasFile => Path.Combine(Root, "cameras.json");
