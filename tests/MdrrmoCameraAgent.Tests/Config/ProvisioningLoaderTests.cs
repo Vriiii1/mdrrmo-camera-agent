@@ -11,9 +11,12 @@ public class ProvisioningLoaderTests
         var path = Path.GetTempFileName();
         File.WriteAllText(path, """
             {
-              "enrollment_token": "tok123",
-              "hub_base_url":     "https://hub.example",
-              "jwks_url":         "https://hub.example/.well-known/jwks.json"
+              "enrollment_token":  "tok123",
+              "hub_base_url":      "https://hub.example",
+              "jwks_url":          "https://hub.example/.well-known/jwks.json",
+              "api_base_url":      "https://api.example",
+              "supabase_url":      "https://xyz.supabase.co",
+              "supabase_anon_key": "anon-key-abc"
             }
             """);
         try
@@ -22,6 +25,9 @@ public class ProvisioningLoaderTests
             bundle.EnrollmentToken.Should().Be("tok123");
             bundle.HubBaseUrl.Should().Be("https://hub.example");
             bundle.JwksUrl.Should().Be("https://hub.example/.well-known/jwks.json");
+            bundle.ApiBaseUrl.Should().Be("https://api.example");
+            bundle.SupabaseUrl.Should().Be("https://xyz.supabase.co");
+            bundle.SupabaseAnonKey.Should().Be("anon-key-abc");
         }
         finally { File.Delete(path); }
     }
@@ -50,6 +56,46 @@ public class ProvisioningLoaderTests
             var act = () => ProvisioningLoader.LoadFromFile(path);
             act.Should().Throw<InvalidDataException>()
                .WithMessage("*hub_base_url*");
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Load_ThrowsWhenSupabaseUrlMissing()
+    {
+        var path = Path.GetTempFileName();
+        File.WriteAllText(path, """
+            {
+              "enrollment_token":  "tok",
+              "hub_base_url":      "https://hub.example",
+              "supabase_anon_key": "anon-key"
+            }
+            """);
+        try
+        {
+            var act = () => ProvisioningLoader.LoadFromFile(path);
+            act.Should().Throw<InvalidDataException>()
+               .WithMessage("*supabase_url*");
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void Load_ThrowsWhenSupabaseAnonKeyMissing()
+    {
+        var path = Path.GetTempFileName();
+        File.WriteAllText(path, """
+            {
+              "enrollment_token": "tok",
+              "hub_base_url":     "https://hub.example",
+              "supabase_url":     "https://xyz.supabase.co"
+            }
+            """);
+        try
+        {
+            var act = () => ProvisioningLoader.LoadFromFile(path);
+            act.Should().Throw<InvalidDataException>()
+               .WithMessage("*supabase_anon_key*");
         }
         finally { File.Delete(path); }
     }

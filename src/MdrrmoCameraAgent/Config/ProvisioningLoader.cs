@@ -14,6 +14,10 @@ public static class ProvisioningLoader
             throw new InvalidDataException("provisioning JSON missing enrollment_token");
         if (string.IsNullOrWhiteSpace(bundle.HubBaseUrl))
             throw new InvalidDataException("provisioning JSON missing hub_base_url");
+        if (string.IsNullOrWhiteSpace(bundle.SupabaseUrl))
+            throw new InvalidDataException("provisioning JSON missing supabase_url");
+        if (string.IsNullOrWhiteSpace(bundle.SupabaseAnonKey))
+            throw new InvalidDataException("provisioning JSON missing supabase_anon_key");
 
         return bundle;
     }
