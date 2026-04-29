@@ -17,6 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="LocalUi\wwwroot\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\..\third-party\mediamtx.exe"
           Condition="Exists('..\..\third-party\mediamtx.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

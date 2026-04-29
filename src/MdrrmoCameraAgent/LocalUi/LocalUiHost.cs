@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -65,6 +66,22 @@ public sealed class LocalUiHost
                 mediaMtxYmlPath,
                 _runner);
             _app.MapPost("/cameras", ctx => endpoint.HandleAsync(ctx));
+            _app.MapPost("/cameras/hikvision", AddHikvisionEndpoint.HandleListAsync);
+        }
+
+        var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "LocalUi", "wwwroot");
+        if (Directory.Exists(wwwrootPath))
+        {
+            _app.UseDefaultFiles(new DefaultFilesOptions
+            {
+                FileProvider = new PhysicalFileProvider(wwwrootPath),
+                RequestPath  = "",
+            });
+            _app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(wwwrootPath),
+                RequestPath  = "",
+            });
         }
 
         await _app.StartAsync(ct);

@@ -1,0 +1,32 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; font-size: 14px; background: #f5f5f5; color: #222; }
+header { background: #1a3a5c; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 16px; font-weight: 600; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 10px; }
+.badge-checking { background: #999; }
+.badge-online  { background: #27ae60; }
+.badge-error   { background: #c0392b; }
+nav.tabs { background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; display: flex; gap: 0; }
+.tab { background: none; border: none; border-bottom: 3px solid transparent; padding: 10px 16px; cursor: pointer; font-size: 13px; color: #555; }
+.tab.active { border-bottom-color: #1a3a5c; color: #1a3a5c; font-weight: 600; }
+.coming-soon { font-size: 10px; background: #eee; color: #888; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+main { padding: 20px; max-width: 640px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+h2 { font-size: 15px; margin-bottom: 16px; color: #333; }
+h3 { font-size: 13px; margin: 16px 0 8px; color: #444; }
+form { display: flex; flex-direction: column; gap: 10px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #444; }
+label.checkbox { flex-direction: row; align-items: center; gap: 8px; }
+input[type=text], input[type=password] { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+input[type=text]:focus, input[type=password]:focus { outline: none; border-color: #1a3a5c; }
+button[type=submit], #btn-enroll-selected { background: #1a3a5c; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; width: fit-content; }
+button:disabled { background: #aaa; cursor: not-allowed; }
+.result { margin-top: 12px; padding: 8px 12px; border-radius: 4px; font-size: 13px; }
+.result.pending { background: #eee; color: #555; }
+.result.success { background: #d4edda; color: #155724; }
+.result.error   { background: #f8d7da; color: #721c24; }
+.result.warning { background: #fff3cd; color: #856404; }
+.placeholder { color: #888; font-style: italic; padding: 20px 0; }
+#channel-list ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+#channel-list li { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; padding: 6px 10px; }

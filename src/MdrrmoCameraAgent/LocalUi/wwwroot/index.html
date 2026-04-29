@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MDRRMO Camera Agent</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>MDRRMO Camera Agent</h1>
+    <span id="status-badge" class="badge badge-checking">Checking…</span>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="generic">Generic RTSP</button>
+    <button class="tab" data-tab="hikvision">Hikvision NVR</button>
+    <button class="tab" data-tab="onvif">ONVIF <span class="coming-soon">Coming soon</span></button>
+  </nav>
+
+  <main>
+    <!-- Generic RTSP tab -->
+    <section id="tab-generic" class="tab-panel active">
+      <h2>Add Camera — Generic RTSP</h2>
+      <form id="form-generic">
+        <label>RTSP URL <input type="text" name="rtsp_url" placeholder="rtsp://admin:pass@192.168.1.10:554/stream1" required></label>
+        <label>Camera Name <input type="text" name="label" placeholder="City Hall Front Gate" required></label>
+        <label>Public Label (optional) <input type="text" name="public_label" placeholder="City Hall — Public View"></label>
+        <label class="checkbox"><input type="checkbox" name="audio_enabled"> Include audio</label>
+        <button type="submit">Add Camera</button>
+      </form>
+      <div id="result-generic" class="result"></div>
+    </section>
+
+    <!-- Hikvision tab -->
+    <section id="tab-hikvision" class="tab-panel">
+      <h2>Add Cameras — Hikvision NVR</h2>
+      <form id="form-hikvision-list">
+        <label>NVR IP Address <input type="text" name="nvr_ip" placeholder="192.168.1.200" required></label>
+        <label>Username <input type="text" name="user" value="admin"></label>
+        <label>Password <input type="password" name="pass" placeholder="NVR password"></label>
+        <button type="submit">List Channels</button>
+      </form>
+      <div id="result-hikvision" class="result"></div>
+      <div id="channel-list" style="display:none">
+        <h3>Available Channels</h3>
+        <ul id="channels"></ul>
+        <button id="btn-enroll-selected" disabled>Enroll Selected</button>
+      </div>
+    </section>
+
+    <!-- ONVIF tab -->
+    <section id="tab-onvif" class="tab-panel">
+      <h2>ONVIF Auto-Discovery</h2>
+      <p class="placeholder">ONVIF auto-discovery is planned for a future release.</p>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
