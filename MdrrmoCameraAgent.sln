@@ -3,6 +3,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{704A4C26-AF34-4A65-81DB-EA3437F85CD2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MdrrmoCameraAgent", "src\MdrrmoCameraAgent\MdrrmoCameraAgent.csproj", "{455F349B-2E47-4055-9E93-371493119504}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9F17EFF2-2D9C-4CFD-B5D8-AC5877E5F8B6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MdrrmoCameraAgent.Tests", "tests\MdrrmoCameraAgent.Tests\MdrrmoCameraAgent.Tests.csproj", "{7EA49A1D-F581-4373-B008-B377C7858B5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -10,5 +18,19 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{455F349B-2E47-4055-9E93-371493119504}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{455F349B-2E47-4055-9E93-371493119504}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{455F349B-2E47-4055-9E93-371493119504}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{455F349B-2E47-4055-9E93-371493119504}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EA49A1D-F581-4373-B008-B377C7858B5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EA49A1D-F581-4373-B008-B377C7858B5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EA49A1D-F581-4373-B008-B377C7858B5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EA49A1D-F581-4373-B008-B377C7858B5C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{455F349B-2E47-4055-9E93-371493119504} = {704A4C26-AF34-4A65-81DB-EA3437F85CD2}
+		{7EA49A1D-F581-4373-B008-B377C7858B5C} = {9F17EFF2-2D9C-4CFD-B5D8-AC5877E5F8B6}
 	EndGlobalSection
 EndGlobal
