@@ -39,4 +39,18 @@ public class ProvisioningLoaderTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void Load_ThrowsWhenHubBaseUrlMissing()
+    {
+        var path = Path.GetTempFileName();
+        File.WriteAllText(path, """{ "enrollment_token": "tok" }""");
+        try
+        {
+            var act = () => ProvisioningLoader.LoadFromFile(path);
+            act.Should().Throw<InvalidDataException>()
+               .WithMessage("*hub_base_url*");
+        }
+        finally { File.Delete(path); }
+    }
 }
