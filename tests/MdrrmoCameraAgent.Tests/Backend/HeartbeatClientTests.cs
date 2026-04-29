@@ -27,7 +27,21 @@ public class HeartbeatClientTests : IAsyncLifetime
             new[] { new HeartbeatCamera("uuid-1", "online", DateTimeOffset.UtcNow) },
             default);
 
+        r.Ok.Should().BeTrue();
         r.Accepted.Should().Be(1);
         r.Rejected.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Send_ThrowsHeartbeatException_OnNon2xx()
+    {
+        _s.Given(Request.Create().WithPath("/api/v1/agents/heartbeat").UsingPost())
+          .RespondWith(Response.Create().WithStatusCode(401).WithBody("Unauthorized"));
+
+        var c = new HeartbeatClient(new HttpClient { BaseAddress = new Uri(_s.Url!) });
+        await FluentActions.Awaiting(() =>
+                c.SendAsync("bad-jwt", Array.Empty<HeartbeatCamera>(), default))
+            .Should().ThrowAsync<HeartbeatException>()
+            .WithMessage("*401*");
     }
 }

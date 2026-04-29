@@ -4,12 +4,17 @@ using System.Text.Json.Serialization;
 
 namespace MdrrmoCameraAgent.Backend;
 
-public sealed record HeartbeatCamera(string Id, string Status, DateTimeOffset? LastFrameAt);
+public sealed record HeartbeatCamera(
+    [property: JsonPropertyName("id")]             string Id,
+    [property: JsonPropertyName("status")]         string Status,
+    [property: JsonPropertyName("last_frame_at")]  DateTimeOffset? LastFrameAt);
 
 public sealed record HeartbeatResult(
     [property: JsonPropertyName("ok")] bool Ok,
     [property: JsonPropertyName("accepted")] int Accepted,
     [property: JsonPropertyName("rejected")] int Rejected);
+
+public sealed class HeartbeatException(string msg) : Exception(msg);
 
 public sealed class HeartbeatClient(HttpClient http)
 {
@@ -24,15 +29,19 @@ public sealed class HeartbeatClient(HttpClient http)
                 {
                     id            = c.Id,
                     status        = c.Status,
-                    last_frame_at = c.LastFrameAt?.UtcDateTime.ToString("o")
+                    last_frame_at = c.LastFrameAt?.ToString("o")
                 })
             })
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
 
         using var resp = await http.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            throw new HeartbeatException($"heartbeat failed: HTTP {(int)resp.StatusCode} — {body}");
+        }
         return await resp.Content.ReadFromJsonAsync<HeartbeatResult>(cancellationToken: ct)
-               ?? throw new InvalidOperationException("empty heartbeat response");
+               ?? throw new HeartbeatException("empty heartbeat response");
     }
 }
