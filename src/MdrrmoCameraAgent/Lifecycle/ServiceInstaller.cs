@@ -16,8 +16,12 @@ public sealed class ServiceInstaller(IProcessRunner runner)
     }
 
     /// <summary>
-    /// Runs <c>winsw uninstall</c> to remove the Windows service.
+    /// Runs <c>winsw stop</c> then <c>winsw uninstall</c> to remove the Windows service.
+    /// winsw v3 requires the service to be stopped before it can be uninstalled.
     /// </summary>
-    public Task UninstallAsync(string winswExe, string serviceXml, CancellationToken ct) =>
-        runner.RunAsync(winswExe, new[] { "uninstall", serviceXml }, ct);
+    public async Task UninstallAsync(string winswExe, string serviceXml, CancellationToken ct)
+    {
+        await runner.RunAsync(winswExe, new[] { "stop",      serviceXml }, ct);
+        await runner.RunAsync(winswExe, new[] { "uninstall", serviceXml }, ct);
+    }
 }

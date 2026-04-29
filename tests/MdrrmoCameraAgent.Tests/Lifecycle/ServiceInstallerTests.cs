@@ -68,7 +68,7 @@ public class ServiceInstallerTests
     // ── UninstallAsync ────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task UninstallAsync_CallsUninstallOnce_WithCorrectArgs()
+    public async Task UninstallAsync_CallsStopThenUninstall_InOrder()
     {
         var fake      = new FakeProcessRunner();
         var installer = new ServiceInstaller(fake);
@@ -77,9 +77,15 @@ public class ServiceInstallerTests
 
         await installer.UninstallAsync(winswExe, serviceXml, CancellationToken.None);
 
-        fake.Calls.Should().HaveCount(1);
+        fake.Calls.Should().HaveCount(2);
+
+        // First call: winsw stop <xml>
         fake.Calls[0].Exe.Should().Be(winswExe);
-        fake.Calls[0].Args.Should().Equal("uninstall", serviceXml);
+        fake.Calls[0].Args.Should().Equal("stop", serviceXml);
+
+        // Second call: winsw uninstall <xml>
+        fake.Calls[1].Exe.Should().Be(winswExe);
+        fake.Calls[1].Args.Should().Equal("uninstall", serviceXml);
     }
 
     // ── Cancellation ─────────────────────────────────────────────────────────
