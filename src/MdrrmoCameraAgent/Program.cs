@@ -114,6 +114,15 @@ public static class Program
             Console.Error.WriteLine($"[install] WARNING: MdrrmoCameraAgent.xml not found at {xmlSrc}; skipping copy.");
         }
 
+        // Copy LocalUi/wwwroot so the Kestrel UI can serve static files.
+        var wwwSrc  = Path.Combine(exeDir, "LocalUi", "wwwroot");
+        var wwwDest = Path.Combine(installDir, "LocalUi", "wwwroot");
+        if (Directory.Exists(wwwSrc))
+        {
+            Console.WriteLine($"[install] Copying wwwroot -> {wwwDest}");
+            CopyDirectory(wwwSrc, wwwDest);
+        }
+
         // 2. Persist the bundle to the data directory so the service can find it
         //    on startup (winsw calls with just "run", no bundle path argument).
         AppPaths.EnsureDirectoriesExist();
@@ -209,6 +218,15 @@ public static class Program
         await agent.RunAsync(ct);
         Console.WriteLine("Stopped.");
         return 0;
+    }
+
+    private static void CopyDirectory(string src, string dest)
+    {
+        Directory.CreateDirectory(dest);
+        foreach (var file in Directory.GetFiles(src))
+            File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), overwrite: true);
+        foreach (var dir in Directory.GetDirectories(src))
+            CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
     }
 }
 

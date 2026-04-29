@@ -69,7 +69,10 @@ public sealed class LocalUiHost
             _app.MapPost("/cameras/hikvision", AddHikvisionEndpoint.HandleListAsync);
         }
 
-        var wwwrootPath = Path.Combine(AppContext.BaseDirectory, "LocalUi", "wwwroot");
+        // Use the exe's own directory so wwwroot is found when running as a Windows service
+        // (AppContext.BaseDirectory points to the temp extraction dir for single-file apps).
+        var exeDir      = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+        var wwwrootPath = Path.Combine(exeDir, "LocalUi", "wwwroot");
         if (Directory.Exists(wwwrootPath))
         {
             _app.UseDefaultFiles(new DefaultFilesOptions
