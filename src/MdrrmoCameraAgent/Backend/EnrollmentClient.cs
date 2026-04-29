@@ -9,7 +9,7 @@ public sealed class EnrollmentClient(HttpClient http)
     {
         using var resp = await http.PostAsJsonAsync(
             "/api/v1/agents/enrollment",
-            new { enrollment_token = enrollmentToken, hostname, version },
+            new EnrollmentRequest(enrollmentToken, hostname, version),
             ct);
 
         if (!resp.IsSuccessStatusCode)
