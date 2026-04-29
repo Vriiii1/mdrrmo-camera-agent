@@ -39,13 +39,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Stage releases.json for gh-pages
+      - name: Stage Velopack feed files for gh-pages
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path ./gh-pages-staging
-          Copy-Item ./releases/releases.json ./gh-pages-staging/releases.json
+          Copy-Item ./releases/releases.win.json ./gh-pages-staging/releases.win.json
+          Copy-Item ./releases/assets.win.json   ./gh-pages-staging/assets.win.json
 
-      - name: Publish releases.json to gh-pages feed
+      - name: Publish Velopack feed to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
