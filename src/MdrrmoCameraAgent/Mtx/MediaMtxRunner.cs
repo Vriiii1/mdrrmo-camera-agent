@@ -113,7 +113,17 @@ public sealed class MediaMtxRunner : IAsyncDisposable
         var backoff = _initialBackoff;
         while (!ct.IsCancellationRequested)
         {
-            SpawnChild();
+            try
+            {
+                SpawnChild();
+            }
+            catch (Exception ex)
+            {
+                // If the exe is missing or corrupt, signal StartAsync so it can throw rather
+                // than awaiting firstSpawn.Task forever.
+                firstSpawn?.TrySetException(ex);
+                return;
+            }
             firstSpawn?.TrySetResult();
             firstSpawn = null; // only signal once
 
