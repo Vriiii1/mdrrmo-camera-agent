@@ -90,8 +90,16 @@ public class MediaMtxConfigWriterTests
 
     [Fact]
     [SupportedOSPlatform("windows")]
-    public void WriteToFile_AppliesHardenedDacl_DenyingUsersGroup()
+    public void WriteToFile_AppliesHardenedDacl_ExcludingUsersGroup()
     {
+        // Spec §2 Security goal: BUILTIN\Users must not be able to read the yml
+        // (it can contain DPAPI-decrypted RTSP creds). We achieve this with a
+        // protected DACL whose only Allow rules are SYSTEM, Administrators, and
+        // the runner's own user — no inherited ACEs, no Allow for Users. An
+        // explicit Deny for Users is NOT used because Windows evaluates Deny
+        // before Allow, and the runner's own user is itself a member of
+        // BUILTIN\Users — a Deny ACE there would lock the runner out of the
+        // file it just wrote.
         var path = Path.Combine(Path.GetTempPath(), $"mtx-dacl-{Guid.NewGuid():N}.yml");
         try
         {
@@ -103,14 +111,33 @@ public class MediaMtxConfigWriterTests
             var usersSid = new System.Security.Principal.SecurityIdentifier(
                 System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null);
 
-            bool foundDeny = false;
+            // The DACL must be protected (no inherited ACEs leaking access to Users via parent dir).
+            ac.AreAccessRulesProtected.Should().BeTrue(
+                "DACL must be protected so inherited Users-group access cannot leak in");
+
+            // No Allow ACE for the Users group should exist.
+            bool usersHasAllow = false;
             foreach (System.Security.AccessControl.FileSystemAccessRule r in rules)
             {
                 if (r.IdentityReference.Equals(usersSid) &&
-                    r.AccessControlType == System.Security.AccessControl.AccessControlType.Deny)
-                { foundDeny = true; break; }
+                    r.AccessControlType == System.Security.AccessControl.AccessControlType.Allow)
+                { usersHasAllow = true; break; }
             }
-            foundDeny.Should().BeTrue("Users group must have an explicit Deny ACE per spec §2 Security");
+            usersHasAllow.Should().BeFalse(
+                "Users group must not have an Allow ACE — protected DACL implicitly denies them");
+
+            // SYSTEM must still have FullControl Allow (mediamtx.exe runs as SYSTEM under WinSW).
+            var systemSid = new System.Security.Principal.SecurityIdentifier(
+                System.Security.Principal.WellKnownSidType.LocalSystemSid, null);
+            bool systemHasAllow = false;
+            foreach (System.Security.AccessControl.FileSystemAccessRule r in rules)
+            {
+                if (r.IdentityReference.Equals(systemSid) &&
+                    r.AccessControlType == System.Security.AccessControl.AccessControlType.Allow &&
+                    (r.FileSystemRights & System.Security.AccessControl.FileSystemRights.FullControl) != 0)
+                { systemHasAllow = true; break; }
+            }
+            systemHasAllow.Should().BeTrue("SYSTEM must retain FullControl so the mediamtx.exe child process can read/reload the yml");
         }
         finally { try { File.Delete(path); } catch { /* best-effort */ } }
     }

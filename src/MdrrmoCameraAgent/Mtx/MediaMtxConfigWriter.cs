@@ -57,19 +57,31 @@ public static class MediaMtxConfigWriter
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     private static void ApplyHardenedDacl(string path)
     {
+        // Why this is safe: SetAccessRuleProtection(isProtected:true, preserveInheritance:false)
+        // strips ALL inherited ACEs, leaving only the explicit Allow rules added below
+        // (SYSTEM, Administrators, current user). Per the Windows DACL evaluation algorithm,
+        // any principal not matched by an Allow rule receives an implicit deny — there is
+        // no need for an explicit Deny ACE on Users.
+        //
+        // We previously added an explicit Deny for BUILTIN\Users on top of the Allow rules.
+        // That was both (a) redundant for security and (b) actively broken: a non-admin
+        // service-account / interactive user is itself a member of BUILTIN\Users, so the
+        // Deny ACE — which Windows evaluates BEFORE Allows — overrode the current-user
+        // Allow ACE and locked the runner (and tests) out of the file it had just written.
+        //
+        // DPAPI cred protection from other users / processes is preserved by the protected,
+        // explicit-Allow-only DACL.
         var fi      = new System.IO.FileInfo(path);
         var ac      = fi.GetAccessControl();
         ac.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
 
         var system  = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.LocalSystemSid, null);
         var admins  = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinAdministratorsSid, null);
-        var users   = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null);
         var current = System.Security.Principal.WindowsIdentity.GetCurrent().User!;
 
         ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(system,  System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
         ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(admins,  System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
         ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(current, System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
-        ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(users,   System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Deny));
 
         fi.SetAccessControl(ac);
     }
