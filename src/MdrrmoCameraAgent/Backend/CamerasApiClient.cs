@@ -19,6 +19,7 @@ public sealed class CamerasApiClient(HttpClient http)
         if (!resp.IsSuccessStatusCode)
             throw new HttpRequestException($"cameras endpoint failed: HTTP {(int)resp.StatusCode} — {raw}");
 
-        return JsonDocument.Parse(raw).RootElement.Clone();
+        using var doc = JsonDocument.Parse(raw);
+        return doc.RootElement.Clone();
     }
 }

@@ -81,6 +81,7 @@ public sealed class AddCameraEndpoint(
         }
         catch (HttpRequestException ex)
         {
+            try { File.Delete(credsPath); } catch { /* best-effort rollback */ }
             ctx.Response.StatusCode = 502;
             await ctx.Response.WriteAsJsonAsync(new { error = ex.Message });
             return;
@@ -89,24 +90,53 @@ public sealed class AddCameraEndpoint(
         var streamPath = inserted.GetProperty("stream_path").GetString()!;
         var id         = inserted.GetProperty("id").GetString()!;
 
-        // Build a CameraEntry with a placeholder WHIP URL; the real WHIP URL is
-        // managed by PublishTokenRefresher in later waves — for now a round-trip
-        // through mediamtx.yml just needs a non-null value.
-        var entries = new List<CameraEntry>
-        {
-            new(cameraId, streamPath, req.RtspUrl, string.Empty)
-        };
-        MediaMtxConfigWriter.WriteToFile(mediaMtxYmlPath, entries);
+        // Load existing camera registry, append new entry, persist.
+        var allEntries = LoadCameraRegistry();
+        allEntries.Add(new CameraEntry(cameraId, streamPath, req.RtspUrl, string.Empty));
+        SaveCameraRegistry(allEntries);
+        MediaMtxConfigWriter.WriteToFile(mediaMtxYmlPath, allEntries);
 
         if (runner is not null)
         {
-            try { await runner.ReloadAsync(entries, ctx.RequestAborted); }
+            try { await runner.ReloadAsync(allEntries, ctx.RequestAborted); }
             catch { /* MediaMTX not yet running in early waves — ignore */ }
         }
 
         ctx.Response.StatusCode = 201;
         await ctx.Response.WriteAsJsonAsync(new { id, stream_path = streamPath });
     }
+
+    private static List<CameraEntry> LoadCameraRegistry()
+    {
+        var path = AppPaths.CamerasFile;
+        if (!File.Exists(path))
+            return new List<CameraEntry>();
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            var records = JsonSerializer.Deserialize<List<CameraRegistryEntry>>(json)
+                          ?? new List<CameraRegistryEntry>();
+            return records
+                .Select(r => new CameraEntry(r.Id, r.StreamPath, r.RtspUrl, r.WhipUrl))
+                .ToList();
+        }
+        catch
+        {
+            return new List<CameraEntry>();
+        }
+    }
+
+    private static void SaveCameraRegistry(List<CameraEntry> entries)
+    {
+        var records = entries
+            .Select(e => new CameraRegistryEntry(e.Id, e.StreamPath, e.RtspUrl, e.WhipUrl))
+            .ToList();
+        var json = JsonSerializer.Serialize(records, new JsonSerializerOptions { WriteIndented = false });
+        File.WriteAllText(AppPaths.CamerasFile, json);
+    }
+
+    private sealed record CameraRegistryEntry(string Id, string StreamPath, string RtspUrl, string WhipUrl);
 }
 
 public sealed record AddCameraRequest(
