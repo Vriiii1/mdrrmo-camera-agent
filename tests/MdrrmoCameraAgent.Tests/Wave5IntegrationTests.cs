@@ -141,9 +141,14 @@ public class Wave5IntegrationTests : IAsyncLifetime
         System.Text.Encoding.UTF8.GetString(rawBytes).Should()
             .NotContain("rtsp://", because: "DPAPI blobs must not contain the plaintext RTSP URL");
 
-        // 3. mediamtx.yml was regenerated and contains the new stream path
+        // 3. mediamtx.yml was regenerated. At enrollment time the hub_base_url is not yet
+        //    known, so WhipUrl is empty and the camera is not publishable yet. The yml should
+        //    contain only a registration-only stub with `paths: {}`. The stream path will
+        //    appear once hub_base_url is provisioned and WhipUrl is populated.
         File.Exists(AppPaths.MediaMtxYml).Should().BeTrue("mediamtx.yml was not written");
-        File.ReadAllText(AppPaths.MediaMtxYml).Should().Contain("muni-infanta/cam-11111111");
+        var mtxYml = File.ReadAllText(AppPaths.MediaMtxYml);
+        mtxYml.Should().Contain("paths: {}", "enrollment-only cameras must yield a valid stub yml");
+        mtxYml.Should().NotContain("runOnReady", "no publish loop until hub_base_url is set");
 
         // 4. Camera registry (cameras.json) was written
         File.Exists(AppPaths.CamerasFile).Should().BeTrue("cameras.json registry was not written");

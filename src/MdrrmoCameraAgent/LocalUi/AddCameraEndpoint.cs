@@ -92,7 +92,7 @@ public sealed class AddCameraEndpoint(
 
         // Load existing camera registry, append new entry, persist.
         var allEntries = LoadCameraRegistry();
-        allEntries.Add(new CameraEntry(cameraId, streamPath, req.RtspUrl, string.Empty));
+        allEntries.Add(new CameraEntry(cameraId, streamPath, req.RtspUrl, null));
         SaveCameraRegistry(allEntries);
         MediaMtxConfigWriter.WriteToFile(mediaMtxYmlPath, allEntries);
 
@@ -136,7 +136,7 @@ public sealed class AddCameraEndpoint(
         File.WriteAllText(AppPaths.CamerasFile, json);
     }
 
-    private sealed record CameraRegistryEntry(string Id, string StreamPath, string RtspUrl, string WhipUrl);
+    private sealed record CameraRegistryEntry(string Id, string StreamPath, string RtspUrl, string? WhipUrl);
 }
 
 public sealed record AddCameraRequest(
