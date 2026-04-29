@@ -1,0 +1,18 @@
+<service>
+  <id>MdrrmoCameraAgent</id>
+  <name>MDRRMO Camera Agent</name>
+  <description>Publishes LGU CCTV streams to the MDRRMO hub.</description>
+  <executable>%BASE%\MdrrmoCameraAgent.exe</executable>
+  <arguments>run</arguments>
+  <onfailure action="restart" delay="10 sec"/>
+  <onfailure action="restart" delay="30 sec"/>
+  <onfailure action="restart" delay="60 sec"/>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+  <stoptimeout>30sec</stoptimeout>
+  <serviceaccount>
+    <username>LocalSystem</username>
+  </serviceaccount>
+</service>
