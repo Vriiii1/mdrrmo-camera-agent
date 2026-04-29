@@ -1,0 +1,15 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+dist/
+*.pfx
+*.snk
+*.dpapi
+local-creds.json
+TestResults/
+publish/
+*.nupkg
+packages/
