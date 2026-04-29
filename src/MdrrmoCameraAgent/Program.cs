@@ -18,10 +18,18 @@ public static class Program
             Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
             "MDRRMO", "CameraAgent");
 
+    // Sync entry point so VelopackApp.Build().Run() executes before the async
+    // state machine — Velopack requires this to handle update-restart hooks.
     [SupportedOSPlatform("windows")]
-    public static async Task<int> Main(string[] args)
+    public static int Main(string[] args)
     {
         VelopackApp.Build().Run();
+        return MainAsync(args).GetAwaiter().GetResult();
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static async Task<int> MainAsync(string[] args)
+    {
         Console.WriteLine($"{AgentName} v{ThisAssembly.Version}");
 
         using var cts = new CancellationTokenSource();
