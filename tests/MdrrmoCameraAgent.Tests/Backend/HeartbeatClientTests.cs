@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MdrrmoCameraAgent.Backend;
+using System.Net.Http.Json;
 using WireMock.RequestBuilders;
 using WireMock.ResponseBuilders;
 using WireMock.Server;
@@ -43,5 +44,58 @@ public class HeartbeatClientTests : IAsyncLifetime
                 c.SendAsync("bad-jwt", Array.Empty<HeartbeatCamera>(), default))
             .Should().ThrowAsync<HeartbeatException>()
             .WithMessage("*401*");
+    }
+
+    [Fact]
+    public async Task SendAsync_IncludesPublishStatus_WhenProvided()
+    {
+        var handler = new CapturingHandler(_ =>
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { ok = true, accepted = 1, rejected = 0 })
+            });
+
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var client = new HeartbeatClient(http);
+
+        await client.SendAsync("jwt",
+            new[] { new HeartbeatCamera("cam-1", "online", DateTimeOffset.UtcNow, PublishStatus: "publishing") },
+            CancellationToken.None);
+
+        handler.LastRequestBody.Should().Contain("\"publish_status\":\"publishing\"");
+    }
+
+    [Fact]
+    public async Task SendAsync_OmitsPublishStatus_WhenNull()
+    {
+        var handler = new CapturingHandler(_ =>
+            new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { ok = true, accepted = 0, rejected = 0 })
+            });
+
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://example.test") };
+        var client = new HeartbeatClient(http);
+
+        await client.SendAsync("jwt",
+            new[] { new HeartbeatCamera("cam-1", "online", null, PublishStatus: null) },
+            CancellationToken.None);
+
+        handler.LastRequestBody.Should().NotContain("publish_status");
+    }
+
+    private sealed class CapturingHandler(
+        Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public string? LastRequestBody { get; private set; }
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken _)
+        {
+            LastRequestBody = request.Content is not null
+                ? await request.Content.ReadAsStringAsync()
+                : null;
+            return respond(request);
+        }
     }
 }

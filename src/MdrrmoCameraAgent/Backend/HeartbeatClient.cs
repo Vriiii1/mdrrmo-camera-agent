@@ -7,7 +7,8 @@ namespace MdrrmoCameraAgent.Backend;
 public sealed record HeartbeatCamera(
     [property: JsonPropertyName("id")]             string Id,
     [property: JsonPropertyName("status")]         string Status,
-    [property: JsonPropertyName("last_frame_at")]  DateTimeOffset? LastFrameAt);
+    [property: JsonPropertyName("last_frame_at")]  DateTimeOffset? LastFrameAt,
+    [property: JsonPropertyName("publish_status")] string? PublishStatus = null);
 
 public sealed record HeartbeatResult(
     [property: JsonPropertyName("ok")] bool Ok,
@@ -25,11 +26,16 @@ public sealed class HeartbeatClient(HttpClient http)
         {
             Content = JsonContent.Create(new
             {
-                cameras = cameras.Select(c => new
+                cameras = cameras.Select(c =>
                 {
-                    id            = c.Id,
-                    status        = c.Status,
-                    last_frame_at = c.LastFrameAt?.ToString("o")
+                    var dict = new Dictionary<string, object?>
+                    {
+                        ["id"]             = c.Id,
+                        ["status"]         = c.Status,
+                        ["last_frame_at"]  = c.LastFrameAt?.ToString("o"),
+                    };
+                    if (c.PublishStatus is not null) dict["publish_status"] = c.PublishStatus;
+                    return dict;
                 })
             })
         };
