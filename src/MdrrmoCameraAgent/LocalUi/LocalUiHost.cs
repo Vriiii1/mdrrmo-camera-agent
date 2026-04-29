@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Net;
 
 namespace MdrrmoCameraAgent.LocalUi;
@@ -20,6 +21,8 @@ public sealed class LocalUiHost
         var b = WebApplication.CreateBuilder();
         b.WebHost.ConfigureKestrel(o => o.Listen(IPAddress.Loopback, _requestedPort));
         b.WebHost.SuppressStatusMessages(true);
+        b.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+        b.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
         _app = b.Build();
         _app.MapGet("/health", () => Results.Ok(new { ok = true }));
         await _app.StartAsync(ct);
