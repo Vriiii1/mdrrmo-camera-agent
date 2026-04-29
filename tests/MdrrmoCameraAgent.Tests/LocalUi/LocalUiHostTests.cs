@@ -1,8 +1,10 @@
 using FluentAssertions;
 using MdrrmoCameraAgent.LocalUi;
+using System.Runtime.Versioning;
 
 namespace MdrrmoCameraAgent.Tests.LocalUi;
 
+[SupportedOSPlatform("windows")]
 public class LocalUiHostTests
 {
     [Fact]

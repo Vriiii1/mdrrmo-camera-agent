@@ -1,3 +1,5 @@
+using MdrrmoCameraAgent.Backend;
+using MdrrmoCameraAgent.Mtx;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -5,16 +7,40 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Net;
+using System.Runtime.Versioning;
 
 namespace MdrrmoCameraAgent.LocalUi;
 
+[SupportedOSPlatform("windows")]
 public sealed class LocalUiHost
 {
     private readonly int _requestedPort;
+    private readonly string? _apiBaseUrl;
+    private readonly Func<string>? _getJwt;
+    private readonly MediaMtxRunner? _runner;
     private WebApplication? _app;
     public string? BoundUrl { get; private set; }
 
+    /// <summary>
+    /// Minimal constructor — no /cameras route. Used by existing T16 tests.
+    /// </summary>
     public LocalUiHost(int port = 8787) => _requestedPort = port;
+
+    /// <summary>
+    /// Full constructor — wires /cameras route with the provided dependencies.
+    /// Used by T19b integration test and production startup.
+    /// </summary>
+    public LocalUiHost(
+        int port,
+        string apiBaseUrl,
+        Func<string> getJwt,
+        MediaMtxRunner? runner = null)
+    {
+        _requestedPort = port;
+        _apiBaseUrl    = apiBaseUrl;
+        _getJwt        = getJwt;
+        _runner        = runner;
+    }
 
     public async Task StartAsync(CancellationToken ct)
     {
@@ -25,6 +51,22 @@ public sealed class LocalUiHost
         b.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
         _app = b.Build();
         _app.MapGet("/health", () => Results.Ok(new { ok = true }));
+
+        if (_apiBaseUrl is not null && _getJwt is not null)
+        {
+            var camerasApi = new CamerasApiClient(
+                new HttpClient { BaseAddress = new Uri(_apiBaseUrl) });
+            var cameraCredsDir  = AppPaths.CameraCreds;
+            var mediaMtxYmlPath = AppPaths.MediaMtxYml;
+            var endpoint = new AddCameraEndpoint(
+                camerasApi,
+                _getJwt,
+                cameraCredsDir,
+                mediaMtxYmlPath,
+                _runner);
+            _app.MapPost("/cameras", ctx => endpoint.HandleAsync(ctx));
+        }
+
         await _app.StartAsync(ct);
         BoundUrl = _app.Urls.First();
     }
