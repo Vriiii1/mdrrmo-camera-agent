@@ -1,5 +1,6 @@
 using MdrrmoCameraAgent.Backend;
 using MdrrmoCameraAgent.Config;
+using MdrrmoCameraAgent.LocalUi;
 using MdrrmoCameraAgent.Storage;
 using System.Runtime.Versioning;
 using System.Text.Json;
@@ -34,6 +35,13 @@ public sealed class MinimumViableAgent
 
         var (_, jwtCache, hbClient, sbHttp, hbHttp) = await BootstrapAsync(ct);
 
+        var ui = new LocalUiHost(
+            port:       8787,
+            apiBaseUrl: _bundle.ApiBaseUrl!,
+            getJwt:     () => jwtCache.GetTokenAsync(CancellationToken.None).GetAwaiter().GetResult());
+        await ui.StartAsync(ct);
+        Console.WriteLine($"Local UI: {ui.BoundUrl}");
+
         try
         {
             while (!ct.IsCancellationRequested)
@@ -59,6 +67,7 @@ public sealed class MinimumViableAgent
         }
         finally
         {
+            await ui.StopAsync(CancellationToken.None);
             sbHttp.Dispose();
             hbHttp.Dispose();
         }
