@@ -32,7 +32,7 @@ public sealed class MinimumViableAgent
     {
         AppPaths.EnsureDirectoriesExist();
 
-        var (_, jwtCache, hbClient, hbHttp) = await BootstrapAsync(ct);
+        var (_, jwtCache, hbClient, sbHttp, hbHttp) = await BootstrapAsync(ct);
 
         try
         {
@@ -44,6 +44,7 @@ public sealed class MinimumViableAgent
                     await hbClient.SendAsync(jwt, Array.Empty<HeartbeatCamera>(), ct);
                 }
                 catch (OperationCanceledException) { break; }
+                catch (OutOfMemoryException) { throw; }
                 catch (Exception ex)
                 {
                     // Heartbeat is fault-tolerant: log and keep looping.
@@ -58,11 +59,12 @@ public sealed class MinimumViableAgent
         }
         finally
         {
+            sbHttp.Dispose();
             hbHttp.Dispose();
         }
     }
 
-    private async Task<(EnrollmentResponse Creds, JwtCache Jwt, HeartbeatClient Hb, HttpClient HbHttp)>
+    private async Task<(EnrollmentResponse Creds, JwtCache Jwt, HeartbeatClient Hb, HttpClient SbHttp, HttpClient HbHttp)>
         BootstrapAsync(CancellationToken ct)
     {
         // 1. Enroll if no creds on disk.
@@ -75,16 +77,25 @@ public sealed class MinimumViableAgent
             WriteCreds(creds);
         }
 
-        // 2. Build the JWT cache (auto-refresh handled inside JwtCache).
         var sbHttp = new HttpClient { BaseAddress = new Uri(_bundle.SupabaseUrl!) };
-        var auth   = new AuthBridgeClient(sbHttp, _bundle.SupabaseAnonKey!);
-        var jwtCache = new JwtCache(c => auth.MintJwtAsync(creds.AgentId, creds.AgentSecret, c));
+        var hbHttp = new HttpClient { BaseAddress = new Uri(_bundle.ApiBaseUrl!) };
+        try
+        {
+            // 2. Build the JWT cache (auto-refresh handled inside JwtCache).
+            var auth     = new AuthBridgeClient(sbHttp, _bundle.SupabaseAnonKey!);
+            var jwtCache = new JwtCache(c => auth.MintJwtAsync(creds.AgentId, creds.AgentSecret, c));
 
-        // 3. Heartbeat client — long-lived HttpClient.
-        var hbHttp  = new HttpClient { BaseAddress = new Uri(_bundle.ApiBaseUrl!) };
-        var hbClient = new HeartbeatClient(hbHttp);
+            // 3. Heartbeat client — long-lived HttpClient.
+            var hbClient = new HeartbeatClient(hbHttp);
 
-        return (creds, jwtCache, hbClient, hbHttp);
+            return (creds, jwtCache, hbClient, sbHttp, hbHttp);
+        }
+        catch
+        {
+            sbHttp.Dispose();
+            hbHttp.Dispose();
+            throw;
+        }
     }
 
     private static EnrollmentResponse? TryReadCreds()

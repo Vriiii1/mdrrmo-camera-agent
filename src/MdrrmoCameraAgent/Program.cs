@@ -19,7 +19,14 @@ public static class Program
             var agent  = new MinimumViableAgent(bundle, Environment.MachineName);
 
             using var cts = new CancellationTokenSource();
-            Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+            ConsoleCancelEventHandler? handler = null;
+            handler = (_, e) =>
+            {
+                e.Cancel = true;
+                cts.Cancel();
+                Console.CancelKeyPress -= handler;
+            };
+            Console.CancelKeyPress += handler;
 
             Console.WriteLine("MDRRMO Camera Agent — heartbeat loop running. Ctrl-C to stop.");
             await agent.RunAsync(cts.Token);
@@ -28,7 +35,7 @@ public static class Program
         }
 
         Console.WriteLine("Usage: MdrrmoCameraAgent.exe enroll <bundle.json>");
-        return 0;
+        return 1;
     }
 }
 
