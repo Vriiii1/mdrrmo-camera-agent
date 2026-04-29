@@ -32,6 +32,11 @@ Source: "..\third-party\winsw.exe";           DestDir: "{app}"; DestName: "winsw
 Source: "..\third-party\mediamtx.exe";        DestDir: "{app}\mediamtx"
 Source: "..\third-party\ffmpeg.exe";         DestDir: "{app}\mediamtx"
 Source: "..\packaging\MdrrmoCameraAgent.xml"; DestDir: "{app}"
+; LocalUi/wwwroot — static assets the agent's Kestrel host serves at 127.0.0.1:8787.
+; Without this line, http://127.0.0.1:8787/ 404s after install (LocalUiHost.cs silently
+; skips UseStaticFiles when the directory is missing). Program.cs RunInstallAsync also
+; copies these defensively, but [Files] is the canonical path for the Inno installer.
+Source: "..\dist\LocalUi\wwwroot\*";          DestDir: "{app}\LocalUi\wwwroot"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Run]
 ; Install and start the Windows service, passing the provisioning bundle path resolved at
