@@ -101,36 +101,30 @@ public static class Program
         var winswDest  = Path.Combine(installDir, "winsw.exe");
         var xmlDest    = Path.Combine(installDir, "MdrrmoCameraAgent.xml");
 
-        Console.WriteLine($"[install] Copying {exePath} -> {exeDest}");
-        File.Copy(exePath, exeDest, overwrite: true);
-
-        if (File.Exists(winswSrc))
-        {
-            Console.WriteLine($"[install] Copying {winswSrc} -> {winswDest}");
-            File.Copy(winswSrc, winswDest, overwrite: true);
-        }
-        else
-        {
-            Console.Error.WriteLine($"[install] WARNING: winsw.exe not found at {winswSrc}; skipping copy.");
-        }
-
-        if (File.Exists(xmlSrc))
-        {
-            Console.WriteLine($"[install] Copying {xmlSrc} -> {xmlDest}");
-            File.Copy(xmlSrc, xmlDest, overwrite: true);
-        }
-        else
-        {
-            Console.Error.WriteLine($"[install] WARNING: MdrrmoCameraAgent.xml not found at {xmlSrc}; skipping copy.");
-        }
+        // CopyIfDifferent: skip when source and destination resolve to the same
+        // path. This makes the install subcommand idempotent when invoked from
+        // an installer that has already extracted files into installDir (e.g. the
+        // Inno Setup wizard at packaging/installer.iss [Files] step copies these
+        // same files to {app}=installDir, then [Run] launches the agent from
+        // {app}\MdrrmoCameraAgent.exe — self-copy would otherwise fail with
+        // UnauthorizedAccessException because Windows refuses File.Copy of a
+        // running executable over itself).
+        CopyFileIfDifferent(exePath,   exeDest,   required: true,  label: "agent exe");
+        CopyFileIfDifferent(winswSrc,  winswDest, required: false, label: "winsw.exe");
+        CopyFileIfDifferent(xmlSrc,    xmlDest,   required: false, label: "MdrrmoCameraAgent.xml");
 
         // Copy LocalUi/wwwroot so the Kestrel UI can serve static files.
         var wwwSrc  = Path.Combine(exeDir, "LocalUi", "wwwroot");
         var wwwDest = Path.Combine(installDir, "LocalUi", "wwwroot");
-        if (Directory.Exists(wwwSrc))
+        if (Directory.Exists(wwwSrc) &&
+            !string.Equals(Path.GetFullPath(wwwSrc), Path.GetFullPath(wwwDest), StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine($"[install] Copying wwwroot -> {wwwDest}");
             CopyDirectory(wwwSrc, wwwDest);
+        }
+        else if (Directory.Exists(wwwSrc))
+        {
+            Console.WriteLine($"[install] wwwroot already at destination — skipping copy.");
         }
 
         // 2. Persist the bundle to the data directory so the service can find it
@@ -237,6 +231,33 @@ public static class Program
             File.Copy(file, Path.Combine(dest, Path.GetFileName(file)), overwrite: true);
         foreach (var dir in Directory.GetDirectories(src))
             CopyDirectory(dir, Path.Combine(dest, Path.GetFileName(dir)));
+    }
+
+    // Copies src -> dest unless they already resolve to the same file. Required
+    // when an external installer has already placed the file at dest (e.g. Inno
+    // Setup's [Files] step) and then invokes us from that same location — the
+    // running exe cannot be copied over itself.
+    private static void CopyFileIfDifferent(string src, string dest, bool required, string label)
+    {
+        if (!File.Exists(src))
+        {
+            if (required)
+                throw new FileNotFoundException(
+                    $"required {label} not found at {src}", src);
+            Console.Error.WriteLine($"[install] WARNING: {label} not found at {src}; skipping copy.");
+            return;
+        }
+
+        var srcFull  = Path.GetFullPath(src);
+        var destFull = Path.GetFullPath(dest);
+        if (string.Equals(srcFull, destFull, StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"[install] {label} already at destination ({destFull}) — skipping copy.");
+            return;
+        }
+
+        Console.WriteLine($"[install] Copying {srcFull} -> {destFull}");
+        File.Copy(srcFull, destFull, overwrite: true);
     }
 }
 

@@ -54,5 +54,8 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-$outExe = Join-Path $root "output\MdrrmoCameraAgent-Setup-$Version.exe"
-Write-Host "Done. Installer written to: $outExe"
+# OutputBaseFilename in installer.iss is intentionally version-less so the
+# GitHub `releases/latest/download/` alias keeps working without env-var
+# rotation. The version is still embedded inside the installer (AppVersion).
+$outExe = Join-Path $root "output\MdrrmoCameraAgent-Setup.exe"
+Write-Host "Done. Installer written to: $outExe (AppVersion=$Version)"
