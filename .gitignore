@@ -13,3 +13,14 @@ TestResults/
 publish/
 *.nupkg
 packages/
+
+# Build output (regenerated per build via scripts/release.ps1 + scripts/build-installer.ps1)
+output/
+releases/
+
+# Fetched third-party binaries (re-fetched per build via scripts/fetch-*.ps1)
+third-party/*.exe
+third-party/*.zip
+
+# Velopack runtime
+*.vpk
