@@ -10,6 +10,7 @@ using WireMock.Server;
 
 namespace MdrrmoCameraAgent.Tests.Lifecycle;
 
+[Collection("SequentialIntegration")]
 public class MinimumViableAgentTests : IAsyncLifetime
 {
     private WireMockServer _api      = null!;   // dashboard
@@ -57,7 +58,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
                      .WithHeader("Content-Type", "application/json")
                      .WithBody("\"" + jwt + "\""));
 
-        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat").UsingPost())
+        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat/").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new {
                 ok = true, accepted = 0, rejected = 0 }));
 
@@ -91,7 +92,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
                 .Should().Be(1);
 
             _api.LogEntries
-                .Count(e => e.RequestMessage?.AbsolutePath == "/api/v1/agents/heartbeat")
+                .Count(e => e.RequestMessage?.AbsolutePath == "/api/v1/agents/heartbeat/")
                 .Should().BeGreaterOrEqualTo(2);
         }
         finally
