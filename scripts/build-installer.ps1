@@ -16,7 +16,7 @@
 #   output/MdrrmoCameraAgent-Setup-<Version>.exe
 
 param(
-    [string]$Version = "0.0.1"
+    [string]$Version = "0.4.0"
 )
 
 $ErrorActionPreference = "Stop"

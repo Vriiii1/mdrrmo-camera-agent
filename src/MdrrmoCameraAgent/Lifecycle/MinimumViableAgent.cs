@@ -252,7 +252,7 @@ public sealed class MinimumViableAgent
         {
             using var apiHttp = new HttpClient { BaseAddress = new Uri(_bundle.ApiBaseUrl!) };
             var enroll = new EnrollmentClient(apiHttp);
-            creds = await enroll.EnrollAsync(_bundle.EnrollmentToken!, _hostname, "0.0.1", ct);
+            creds = await enroll.EnrollAsync(_bundle.EnrollmentToken!, _hostname, ThisAssembly.Version, ct);
             WriteCreds(creds);
         }
 
