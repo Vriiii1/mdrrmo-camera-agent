@@ -13,15 +13,28 @@ using WireMock.Server;
 namespace MdrrmoCameraAgent.Tests.LocalUi;
 
 [SupportedOSPlatform("windows")]
+[Collection("SequentialIntegration")]
 public class AddCameraEndpointTests : IAsyncDisposable
 {
     private LocalUiHost? _host;
     private WireMockServer? _apiServer;
+    private readonly string _tmpRoot;
+
+    public AddCameraEndpointTests()
+    {
+        _tmpRoot = Path.Combine(Path.GetTempPath(), $"agent-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(_tmpRoot);
+        // Redirect AppPaths so tests never write to ProgramData and cannot
+        // hit UnauthorizedAccessException from a prior ApplyHardenedDacl call.
+        Environment.SetEnvironmentVariable("MDRRMO_AGENT_ROOT", _tmpRoot);
+    }
 
     public async ValueTask DisposeAsync()
     {
         if (_host is not null) await _host.StopAsync(default);
         _apiServer?.Stop();
+        Environment.SetEnvironmentVariable("MDRRMO_AGENT_ROOT", null);
+        try { Directory.Delete(_tmpRoot, recursive: true); } catch { }
     }
 
     /// <summary>
@@ -141,6 +154,101 @@ public class AddCameraEndpointTests : IAsyncDisposable
 
         listener.Stop();
         await listenTask;
+    }
+
+    /// <summary>
+    /// When the camera registry is at the cap, POST /cameras should return 429.
+    /// </summary>
+    [Fact]
+    public async Task PostCameras_Refuses_WhenMaxCamerasReached()
+    {
+        Environment.SetEnvironmentVariable("MDRRMO_AGENT_MAX_CAMERAS", "2");
+        var camerasFile = MdrrmoCameraAgent.AppPaths.CamerasFile;
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(camerasFile)!);
+            File.WriteAllText(camerasFile, """
+                [{"Id":"a","StreamPath":"x/a","RtspUrl":"rtsp://1/a","WhipUrl":null},
+                 {"Id":"b","StreamPath":"x/b","RtspUrl":"rtsp://1/b","WhipUrl":null}]
+                """);
+
+            _apiServer = WireMockServer.Start();
+            _host = new LocalUiHost(
+                port:       0,
+                apiBaseUrl: _apiServer.Url!,
+                getJwt:     () => "fake-jwt");
+            await _host.StartAsync(default);
+
+            using var http = new HttpClient { BaseAddress = new Uri(_host.BoundUrl!) };
+            var resp = await http.PostAsJsonAsync("/cameras", new { rtsp_url = "rtsp://127.0.0.1:9/live" });
+
+            resp.StatusCode.Should().Be(System.Net.HttpStatusCode.TooManyRequests);
+            var body = await resp.Content.ReadAsStringAsync();
+            body.Should().Contain("max cameras reached");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("MDRRMO_AGENT_MAX_CAMERAS", null);
+            try { File.Delete(camerasFile); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// After a successful insert, the onCamerasChanged callback must fire exactly once.
+    /// </summary>
+    [Fact]
+    public async Task PostCameras_TriggersOnCamerasChanged_AfterSuccessfulInsert()
+    {
+        // 1. Fake RTSP server (200 OK)
+        var rtspListener = new TcpListener(IPAddress.Loopback, 0);
+        rtspListener.Start();
+        int rtspPort = ((IPEndPoint)rtspListener.LocalEndpoint).Port;
+        var rtspServerTask = Task.Run(async () =>
+        {
+            using var client = await rtspListener.AcceptTcpClientAsync();
+            using var stream = client.GetStream();
+            var buf = new byte[512];
+            await stream.ReadAsync(buf);
+            var response = Encoding.ASCII.GetBytes("RTSP/1.0 200 OK\r\nCSeq: 1\r\n\r\n");
+            await stream.WriteAsync(response);
+        });
+
+        // 2. Fake cameras API (WireMock)
+        _apiServer = WireMockServer.Start();
+        _apiServer.Given(
+                Request.Create()
+                    .WithPath("/api/v1/agents/cameras/")
+                    .UsingPost())
+            .RespondWith(
+                Response.Create()
+                    .WithStatusCode(201)
+                    .WithBodyAsJson(new
+                    {
+                        id          = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                        stream_path = "muni-test/cam-cb",
+                    }));
+
+        // 3. Callback counter
+        int callCount = 0;
+
+        _host = new LocalUiHost(
+            port:             0,
+            apiBaseUrl:       _apiServer.Url!,
+            getJwt:           () => "fake-jwt",
+            onCamerasChanged: () => { callCount++; return Task.CompletedTask; });
+        await _host.StartAsync(default);
+
+        // 4. POST /cameras
+        using var http = new HttpClient { BaseAddress = new Uri(_host.BoundUrl!) };
+        var resp = await http.PostAsJsonAsync("/cameras",
+            new { rtsp_url = $"rtsp://127.0.0.1:{rtspPort}/live", label = "CB Camera" });
+
+        // 5. Assert
+        resp.StatusCode.Should().Be(HttpStatusCode.Created);
+        callCount.Should().Be(1);
+
+        rtspListener.Stop();
+        await rtspServerTask;
     }
 
     /// <summary>

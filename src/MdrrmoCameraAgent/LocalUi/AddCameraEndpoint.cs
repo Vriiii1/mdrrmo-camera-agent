@@ -14,7 +14,7 @@ public sealed class AddCameraEndpoint(
     Func<string> getJwt,
     string cameraCredsDir,
     string mediaMtxYmlPath,
-    MediaMtxRunner? runner)
+    Func<Task>? onCamerasChanged = null)
 {
     public async Task HandleAsync(HttpContext ctx)
     {
@@ -45,6 +45,17 @@ public sealed class AddCameraEndpoint(
         {
             ctx.Response.StatusCode = 400;
             await ctx.Response.WriteAsJsonAsync(new { error = "rtsp_url must be a valid rtsp:// URI" });
+            return;
+        }
+
+        var maxCameras = int.TryParse(Environment.GetEnvironmentVariable("MDRRMO_AGENT_MAX_CAMERAS"), out var m) ? m : 50;
+        var existingCount = File.Exists(AppPaths.CamerasFile)
+            ? (JsonSerializer.Deserialize<List<JsonElement>>(File.ReadAllText(AppPaths.CamerasFile))?.Count ?? 0)
+            : 0;
+        if (existingCount >= maxCameras)
+        {
+            ctx.Response.StatusCode = 429;
+            await ctx.Response.WriteAsJsonAsync(new { error = $"max cameras reached ({existingCount}/{maxCameras})" });
             return;
         }
 
@@ -96,14 +107,17 @@ public sealed class AddCameraEndpoint(
         SaveCameraRegistry(allEntries);
         MediaMtxConfigWriter.WriteToFile(mediaMtxYmlPath, allEntries);
 
-        if (runner is not null)
-        {
-            try { await runner.ReloadAsync(allEntries, ctx.RequestAborted); }
-            catch { /* MediaMTX not yet running in early waves — ignore */ }
-        }
-
         ctx.Response.StatusCode = 201;
         await ctx.Response.WriteAsJsonAsync(new { id, stream_path = streamPath });
+
+        try
+        {
+            if (onCamerasChanged is not null) await onCamerasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[localui] onCamerasChanged failed: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     private static List<CameraEntry> LoadCameraRegistry()

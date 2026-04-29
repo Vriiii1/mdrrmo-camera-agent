@@ -1,5 +1,4 @@
 using MdrrmoCameraAgent.Backend;
-using MdrrmoCameraAgent.Mtx;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +17,7 @@ public sealed class LocalUiHost
     private readonly int _requestedPort;
     private readonly string? _apiBaseUrl;
     private readonly Func<string>? _getJwt;
-    private readonly MediaMtxRunner? _runner;
+    private readonly Func<Task>? _onCamerasChanged;
     private WebApplication? _app;
     public string? BoundUrl { get; private set; }
 
@@ -35,12 +34,12 @@ public sealed class LocalUiHost
         int port,
         string apiBaseUrl,
         Func<string> getJwt,
-        MediaMtxRunner? runner = null)
+        Func<Task>? onCamerasChanged = null)
     {
-        _requestedPort = port;
-        _apiBaseUrl    = apiBaseUrl;
-        _getJwt        = getJwt;
-        _runner        = runner;
+        _requestedPort    = port;
+        _apiBaseUrl       = apiBaseUrl;
+        _getJwt           = getJwt;
+        _onCamerasChanged = onCamerasChanged;
     }
 
     public async Task StartAsync(CancellationToken ct)
@@ -64,7 +63,7 @@ public sealed class LocalUiHost
                 _getJwt,
                 cameraCredsDir,
                 mediaMtxYmlPath,
-                _runner);
+                _onCamerasChanged);
             _app.MapPost("/cameras", ctx => endpoint.HandleAsync(ctx));
             _app.MapPost("/cameras/hikvision", AddHikvisionEndpoint.HandleListAsync);
         }
