@@ -32,4 +32,12 @@ public class DpapiVaultTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void ReadString_ReturnsNullWhenFileMissing()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".dpapi");
+        // file was never written
+        DpapiVault.ReadString(path).Should().BeNull();
+    }
 }

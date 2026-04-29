@@ -17,12 +17,15 @@ public static class DpapiVault
     {
         var bytes = Encoding.UTF8.GetBytes(plaintext);
         var ciphertext = ProtectedData.Protect(bytes, Entropy, DataProtectionScope.LocalMachine);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var dir = Path.GetDirectoryName(path)
+            ?? throw new ArgumentException("path must not be a root path", nameof(path));
+        Directory.CreateDirectory(dir);
         File.WriteAllBytes(path, ciphertext);
     }
 
-    public static string ReadString(string path)
+    public static string? ReadString(string path)
     {
+        if (!File.Exists(path)) return null;
         var ciphertext = File.ReadAllBytes(path);
         var plaintext  = ProtectedData.Unprotect(ciphertext, Entropy, DataProtectionScope.LocalMachine);
         return Encoding.UTF8.GetString(plaintext);
