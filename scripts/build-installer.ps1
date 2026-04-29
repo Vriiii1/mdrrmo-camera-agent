@@ -21,10 +21,17 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Locate ISCC.exe (Inno Setup 6 compiler)
+# Locate ISCC.exe (Inno Setup 6 compiler) — try multiple locations
 $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
 if (-not (Test-Path $iscc)) {
-    Write-Error "Inno Setup 6 is not installed at the expected path: $iscc`nDownload from https://jrsoftware.org/isdl.php and install, then re-run."
+    $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+}
+if (-not (Test-Path $iscc)) {
+    $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($cmd) { $iscc = $cmd.Source }
+}
+if (-not (Test-Path $iscc)) {
+    Write-Error "Inno Setup 6 not found. Install from https://jrsoftware.org/isdl.php or add ISCC.exe to PATH."
     exit 1
 }
 
@@ -47,4 +54,5 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "Done. Installer written to: $(Join-Path $root 'output\MdrrmoCameraAgent-Setup-' + $Version + '.exe')"
+$outExe = Join-Path $root "output\MdrrmoCameraAgent-Setup-$Version.exe"
+Write-Host "Done. Installer written to: $outExe"

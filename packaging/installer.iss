@@ -16,6 +16,8 @@ DefaultDirName={autopf}\MDRRMO\CameraAgent
 DefaultGroupName=MDRRMO
 PrivilegesRequired=admin
 OutputBaseFilename=MdrrmoCameraAgent-Setup-{#AppVersion}
+OutputDir=..\output
+AppId={{6B3F4C2A-8D1E-4F9A-B3C7-2E5D8A1F4B6C}
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
@@ -26,6 +28,7 @@ WizardStyle=modern
 Source: "..\dist\MdrrmoCameraAgent.exe";      DestDir: "{app}"
 Source: "..\third-party\winsw.exe";           DestDir: "{app}"; DestName: "winsw.exe"
 Source: "..\third-party\mediamtx.exe";        DestDir: "{app}\mediamtx"
+Source: "..\third-party\ffmpeg.exe";         DestDir: "{app}\mediamtx"
 Source: "..\packaging\MdrrmoCameraAgent.xml"; DestDir: "{app}"
 
 [Run]
@@ -35,9 +38,24 @@ Filename: "{app}\MdrrmoCameraAgent.exe"; Parameters: "install ""{param:bundle}""
 
 [UninstallRun]
 ; Stop and remove the Windows service before files are deleted
-Filename: "{app}\MdrrmoCameraAgent.exe"; Parameters: "uninstall"; Flags: runhidden; RunOnceId: "UninstallService"
+Filename: "{app}\MdrrmoCameraAgent.exe"; Parameters: "uninstall"; Flags: runhidden skipifdoesntexist; RunOnceId: "UninstallService"
 
 [UninstallDelete]
 ; Wipe the vault and all agent runtime data from ProgramData after the service is removed
 ; Maps to C:\ProgramData\MDRRMO\CameraAgent
 Type: filesandordirs; Name: "{commonappdata}\MDRRMO\CameraAgent"
+
+[Code]
+function InitializeSetup(): Boolean;
+var
+  bundle: String;
+begin
+  bundle := ExpandConstant('{param:bundle}');
+  if bundle = '' then begin
+    MsgBox('Missing /bundle parameter. Run the installer as:' + #13#10 +
+           'MdrrmoCameraAgent-Setup.exe /bundle="C:\path\to\provisioning.json"',
+           mbError, MB_OK);
+    Result := False;
+  end else
+    Result := True;
+end;
