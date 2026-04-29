@@ -35,9 +35,9 @@ public sealed class AddHikvisionEndpoint
         var pass = req.Pass ?? string.Empty;
 
         // Warn if using known defaults (non-blocking).
-        bool isDefault = pass is "12345" or "Admin12345" or "admin";
+        bool isDefault = DefaultCredsScanner.KnownDefaults.Any(d => d.Pass == pass);
 
-        var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
+        using var http = new HttpClient { BaseAddress = new Uri(baseUrl) };
         var isapi = new IsapiClient(http, user, pass);
 
         IReadOnlyList<HikvisionChannel> channels;

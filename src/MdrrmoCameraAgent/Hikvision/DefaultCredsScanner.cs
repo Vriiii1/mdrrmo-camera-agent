@@ -6,7 +6,7 @@ namespace MdrrmoCameraAgent.Hikvision;
 /// </summary>
 public static class DefaultCredsScanner
 {
-    private static readonly IReadOnlyList<(string User, string Pass)> _knownDefaults =
+    public static IReadOnlyList<(string User, string Pass)> KnownDefaults { get; } =
     [
         ("admin", "12345"),
         ("admin", "Admin12345"),
@@ -18,15 +18,14 @@ public static class DefaultCredsScanner
         string nvrBaseUrl,
         CancellationToken ct)
     {
-        foreach (var (user, pass) in _knownDefaults)
+        foreach (var (user, pass) in KnownDefaults)
         {
             try
             {
-                var http = new HttpClient { BaseAddress = new Uri(nvrBaseUrl) };
+                using var http = new HttpClient { BaseAddress = new Uri(nvrBaseUrl) };
                 var client = new IsapiClient(http, user, pass);
-                var channels = await client.ListChannelsAsync(ct);
-                if (channels.Count >= 0)   // any response (even 0 channels) means auth worked
-                    return (user, pass);
+                await client.ListChannelsAsync(ct);
+                return (user, pass);
             }
             catch (HttpRequestException) { /* 401 or connection error — try next */ }
         }
