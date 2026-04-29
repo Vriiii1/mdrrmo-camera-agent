@@ -93,6 +93,57 @@ public class AddCameraEndpointTests : IAsyncDisposable
     }
 
     /// <summary>
+    /// When the RTSP server replies 401 Unauthorized, POST /cameras should return 422
+    /// with an error message indicating credentials were rejected.
+    /// </summary>
+    [Fact]
+    public async Task PostCamera_AuthRequiredRtsp_Returns422()
+    {
+        // 1. Fake RTSP server that replies 401 Unauthorized
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var listenTask = Task.Run(async () =>
+        {
+            try
+            {
+                using var client = await listener.AcceptTcpClientAsync();
+                using var stream = client.GetStream();
+                var buf = new byte[1024];
+                await stream.ReadAsync(buf);
+                var resp = Encoding.ASCII.GetBytes("RTSP/1.0 401 Unauthorized\r\nCSeq: 1\r\n\r\n");
+                await stream.WriteAsync(resp);
+            }
+            catch { }
+        });
+
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        // 2. Fake cameras API (WireMock) — should not be called, but required by LocalUiHost
+        _apiServer = WireMockServer.Start();
+
+        // 3. LocalUiHost wired with all dependencies
+        _host = new LocalUiHost(
+            port:       0,
+            apiBaseUrl: _apiServer.Url!,
+            getJwt:     () => "fake-jwt");
+        await _host.StartAsync(default);
+
+        // 4. POST /cameras with rtsp_url pointing at the 401-responding server
+        using var http = new HttpClient { BaseAddress = new Uri(_host.BoundUrl!) };
+        var body = new { rtsp_url = $"rtsp://127.0.0.1:{port}/live", label = "Auth Required Camera" };
+        var resp = await http.PostAsJsonAsync("/cameras", body);
+
+        // 5. Assert 422 with credentials-rejected message
+        resp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        var json = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        json.GetProperty("error").GetString().Should()
+            .Contain("RTSP credentials rejected");
+
+        listener.Stop();
+        await listenTask;
+    }
+
+    /// <summary>
     /// When no RTSP server is listening, POST /cameras should return 422.
     /// </summary>
     [Fact]

@@ -33,5 +33,14 @@ public class CamerasApiClientTests : IAsyncLifetime
 
         inserted.GetProperty("id").GetString().Should().Be("11111111-1111-1111-1111-111111111111");
         inserted.GetProperty("stream_path").GetString().Should().Be("muni-infanta/cam-1");
+
+        // Security invariant: tenant identity must NEVER be sent over the wire —
+        // the server derives municipality_id and agent_id from the JWT.
+        var logEntry   = _s.LogEntries.Single(e => e.RequestMessage?.AbsolutePath == "/api/v1/agents/cameras/");
+        var bodyText   = logEntry.RequestMessage?.Body ?? string.Empty;
+        bodyText.Should().NotContain("municipality_id",
+            because: "tenant identity must not be sent in the request body");
+        bodyText.Should().NotContain("agent_id",
+            because: "agent identity must not be sent in the request body");
     }
 }
