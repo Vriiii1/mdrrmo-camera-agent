@@ -14,6 +14,7 @@
   <ItemGroup>
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.7" />
+    <PackageReference Include="Velopack" Version="0.0.1298" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,25 +24,21 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\third-party\mediamtx.exe"
-          Condition="Exists('..\..\third-party\mediamtx.exe')">
+    <None Include="..\..\third-party\mediamtx.exe" Condition="Exists('..\..\third-party\mediamtx.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>mediamtx\mediamtx.exe</Link>
     </None>
-    <None Include="..\..\third-party\ffmpeg.exe"
-          Condition="Exists('..\..\third-party\ffmpeg.exe')">
+    <None Include="..\..\third-party\ffmpeg.exe" Condition="Exists('..\..\third-party\ffmpeg.exe')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>mediamtx\ffmpeg.exe</Link>
     </None>
   </ItemGroup>
 
   <Target Name="EnsureMediaMtx" BeforeTargets="Build">
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\scripts\fetch-mediamtx.ps1&quot;"
-          Condition="!Exists('$(MSBuildThisFileDirectory)..\..\third-party\mediamtx.exe')" />
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\scripts\fetch-mediamtx.ps1&quot;" Condition="!Exists('$(MSBuildThisFileDirectory)..\..\third-party\mediamtx.exe')" />
   </Target>
   <Target Name="EnsureFfmpeg" BeforeTargets="Build">
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\scripts\fetch-ffmpeg.ps1&quot;"
-          Condition="!Exists('$(MSBuildThisFileDirectory)..\..\third-party\ffmpeg.exe')" />
+    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\scripts\fetch-ffmpeg.ps1&quot;" Condition="!Exists('$(MSBuildThisFileDirectory)..\..\third-party\ffmpeg.exe')" />
   </Target>
 
 </Project>

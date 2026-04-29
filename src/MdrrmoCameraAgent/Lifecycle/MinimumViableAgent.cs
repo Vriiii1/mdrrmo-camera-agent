@@ -14,6 +14,8 @@ public sealed class MinimumViableAgent
     private readonly string _hostname;
     private readonly TimeSpan _heartbeatInterval;
 
+    private static readonly TimeSpan UpdateCheckInterval = TimeSpan.FromHours(6);
+
     public MinimumViableAgent(
         ProvisioningBundle bundle,
         string hostname,
@@ -42,10 +44,33 @@ public sealed class MinimumViableAgent
         await ui.StartAsync(ct);
         Console.WriteLine($"Local UI: {ui.BoundUrl}");
 
+        var checker         = new UpdateChecker();
+        var lastUpdateCheck = DateTime.MinValue;
+
         try
         {
             while (!ct.IsCancellationRequested)
             {
+                // ── 6-hour update check ───────────────────────────────────────
+                if (DateTime.UtcNow - lastUpdateCheck >= UpdateCheckInterval)
+                {
+                    try
+                    {
+                        await checker.CheckAndApplyAsync(ct);
+                        // If we reach here, no update was available (ApplyUpdatesAndRestart
+                        // would have exited the process if an update was applied).
+                    }
+                    catch (OperationCanceledException) { break; }
+                    catch (OutOfMemoryException) { throw; }
+                    catch (Exception ex)
+                    {
+                        // Update checks are fault-tolerant; a failed check must not crash the agent.
+                        Console.Error.WriteLine($"[update-check] {ex.GetType().Name}: {ex.Message}");
+                    }
+                    lastUpdateCheck = DateTime.UtcNow;
+                }
+
+                // ── heartbeat ─────────────────────────────────────────────────
                 try
                 {
                     var jwt = await jwtCache.GetTokenAsync(ct);
