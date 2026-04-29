@@ -34,6 +34,8 @@ public sealed class MinimumViableAgent
     public async Task RunAsync(CancellationToken ct)
     {
         AppPaths.EnsureDirectoriesExist();
+        Console.WriteLine($"[paths] runtime root: {Path.GetDirectoryName(AppPaths.RuntimeYml)}");
+        Console.WriteLine($"[paths] logs dir   : {AppPaths.RuntimeLogsDir}");
 
         var (_, jwtCache, hbClient, sbHttp, hbHttp) = await BootstrapAsync(ct);
 

@@ -15,10 +15,20 @@ public static class AppPaths
     public static string MediaMtxExe => Path.Combine(MediaMtxDir, "mediamtx.exe");
     public static string LogsDir     => Path.Combine(Root, "logs");
 
+    private static string RuntimeRoot =>
+        Environment.GetEnvironmentVariable("MDRRMO_AGENT_RUNTIME_ROOT")
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                        "MdrrmoCameraAgent");
+
+    public static string RuntimeYml     => Path.Combine(RuntimeRoot, "runtime", "mediamtx.yml");
+    public static string RuntimeLogsDir => Path.Combine(RuntimeRoot, "logs");
+
     public static void EnsureDirectoriesExist()
     {
         Directory.CreateDirectory(Root);
         Directory.CreateDirectory(MediaMtxDir);
         Directory.CreateDirectory(LogsDir);
+        Directory.CreateDirectory(Path.GetDirectoryName(RuntimeYml)!);
+        Directory.CreateDirectory(RuntimeLogsDir);
     }
 }
