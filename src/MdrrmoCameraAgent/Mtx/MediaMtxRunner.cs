@@ -11,10 +11,14 @@ public sealed class MediaMtxRunner : IAsyncDisposable
     private readonly TimeSpan _initialBackoff;
     private readonly TimeSpan _maxBackoff;
     private readonly HttpClient _controlApi;
+    private readonly bool _wipeOnDispose;
+    private readonly string? _logFilePath;
 
     private Process? _proc;
     private CancellationTokenSource? _watchdogCts;
     private Task? _watchdogTask;
+    private RotatingLogWriter? _log;
+    private CancellationTokenSource? _readerCts;
 
     public int CrashCount { get; private set; }
     public DateTimeOffset? LastCrashAt { get; private set; }
@@ -27,7 +31,9 @@ public sealed class MediaMtxRunner : IAsyncDisposable
         TimeSpan? initialBackoff = null,
         TimeSpan? maxBackoff = null,
         HttpMessageHandler? controlApiHandler = null,
-        string controlApiBase = "http://127.0.0.1:9997")
+        string controlApiBase = "http://127.0.0.1:9997",
+        bool wipeOnDispose = false,
+        string? logFilePath = null)
     {
         _exe            = exePath;
         _config         = configPath;
@@ -37,6 +43,8 @@ public sealed class MediaMtxRunner : IAsyncDisposable
         _controlApi     = controlApiHandler is null
             ? new HttpClient { BaseAddress = new Uri(controlApiBase) }
             : new HttpClient(controlApiHandler) { BaseAddress = new Uri(controlApiBase) };
+        _wipeOnDispose  = wipeOnDispose;
+        _logFilePath    = logFilePath;
     }
 
     public async Task StartAsync()
@@ -84,8 +92,20 @@ public sealed class MediaMtxRunner : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _readerCts?.Cancel();
         await StopAsync();
         _controlApi.Dispose();
+        _log?.Dispose();
+        _readerCts?.Dispose();
+
+        if (_wipeOnDispose)
+        {
+            try { if (File.Exists(_config)) File.Delete(_config); }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[mediamtx] failed to wipe config on dispose: {ex.Message}");
+            }
+        }
     }
 
     private async Task SuperviseAsync(CancellationToken ct, TaskCompletionSource? firstSpawn = null)
@@ -118,11 +138,41 @@ public sealed class MediaMtxRunner : IAsyncDisposable
     {
         var psi = new ProcessStartInfo(_exe)
         {
-            UseShellExecute = false,
-            CreateNoWindow  = true,
+            UseShellExecute        = false,
+            CreateNoWindow         = true,
+            RedirectStandardOutput = _logFilePath is not null,
+            RedirectStandardError  = _logFilePath is not null,
         };
         foreach (var a in _args) psi.ArgumentList.Add(a);
         _proc = Process.Start(psi)!;
+
+        if (_logFilePath is not null)
+        {
+            _log ??= new RotatingLogWriter(_logFilePath);
+            _readerCts?.Cancel();
+            _readerCts?.Dispose();
+            _readerCts = new CancellationTokenSource();
+            var ct = _readerCts.Token;
+            // Fire-and-forget pump tasks — safe because RotatingLogWriter.WriteLine
+            // is lock-guarded and the null-stream guard handles post-Dispose writes silently.
+            _ = Task.Run(() => PumpAsync(_proc.StandardOutput, "out", ct));
+            _ = Task.Run(() => PumpAsync(_proc.StandardError,  "err", ct));
+        }
+    }
+
+    private async Task PumpAsync(StreamReader reader, string tag, CancellationToken ct)
+    {
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                var line = await reader.ReadLineAsync(ct);
+                if (line is null) return;
+                _log?.WriteLine($"[{tag}] {line}");
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (IOException) { } // process disposed underneath us — fine
     }
 
     private async Task KillChildAsync()

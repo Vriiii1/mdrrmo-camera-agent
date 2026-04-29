@@ -1,5 +1,6 @@
 using FluentAssertions;
 using MdrrmoCameraAgent.Mtx;
+using System.Runtime.Versioning;
 
 namespace MdrrmoCameraAgent.Tests.Mtx;
 
@@ -85,6 +86,33 @@ public class MediaMtxConfigWriterTests
 
         var act = () => MediaMtxConfigWriter.Render(cams);
         act.Should().Throw<ArgumentException>().WithMessage("*newline*");
+    }
+
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void WriteToFile_AppliesHardenedDacl_DenyingUsersGroup()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"mtx-dacl-{Guid.NewGuid():N}.yml");
+        try
+        {
+            MediaMtxConfigWriter.WriteToFile(path, Array.Empty<CameraEntry>());
+
+            var ac = new FileInfo(path).GetAccessControl();
+            var rules = ac.GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
+
+            var usersSid = new System.Security.Principal.SecurityIdentifier(
+                System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null);
+
+            bool foundDeny = false;
+            foreach (System.Security.AccessControl.FileSystemAccessRule r in rules)
+            {
+                if (r.IdentityReference.Equals(usersSid) &&
+                    r.AccessControlType == System.Security.AccessControl.AccessControlType.Deny)
+                { foundDeny = true; break; }
+            }
+            foundDeny.Should().BeTrue("Users group must have an explicit Deny ACE per spec §2 Security");
+        }
+        finally { try { File.Delete(path); } catch { /* best-effort */ } }
     }
 
     [SkippableFact]

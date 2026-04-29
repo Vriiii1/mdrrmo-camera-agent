@@ -46,9 +46,31 @@ public static class MediaMtxConfigWriter
         return sb.ToString();
     }
 
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public static void WriteToFile(string path, IEnumerable<CameraEntry> cameras)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, Render(cameras));
+        ApplyHardenedDacl(path);
+    }
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void ApplyHardenedDacl(string path)
+    {
+        var fi      = new System.IO.FileInfo(path);
+        var ac      = fi.GetAccessControl();
+        ac.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+
+        var system  = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.LocalSystemSid, null);
+        var admins  = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinAdministratorsSid, null);
+        var users   = new System.Security.Principal.SecurityIdentifier(System.Security.Principal.WellKnownSidType.BuiltinUsersSid, null);
+        var current = System.Security.Principal.WindowsIdentity.GetCurrent().User!;
+
+        ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(system,  System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
+        ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(admins,  System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
+        ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(current, System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Allow));
+        ac.AddAccessRule(new System.Security.AccessControl.FileSystemAccessRule(users,   System.Security.AccessControl.FileSystemRights.FullControl, System.Security.AccessControl.AccessControlType.Deny));
+
+        fi.SetAccessControl(ac);
     }
 }
