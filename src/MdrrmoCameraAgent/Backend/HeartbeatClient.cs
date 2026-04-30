@@ -22,7 +22,7 @@ public sealed class HeartbeatClient(HttpClient http)
     public async Task<HeartbeatResult> SendAsync(
         string jwt, IEnumerable<HeartbeatCamera> cameras, CancellationToken ct)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/heartbeat")
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/api/v1/agents/heartbeat/")
         {
             Content = JsonContent.Create(new
             {
@@ -40,6 +40,7 @@ public sealed class HeartbeatClient(HttpClient http)
             })
         };
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
+        Console.WriteLine($"[hb-diag] uri={http.BaseAddress}{req.RequestUri} authHeaderSet={req.Headers.Authorization is not null} authScheme={req.Headers.Authorization?.Scheme}");
 
         using var resp = await http.SendAsync(req, ct);
         if (!resp.IsSuccessStatusCode)

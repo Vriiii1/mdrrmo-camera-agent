@@ -31,7 +31,7 @@ public sealed class CamerasApiClient(HttpClient http)
     /// </summary>
     public async Task<List<CameraEntry>> ListAsync(string jwt, CancellationToken ct)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v1/agents/cameras");
+        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/v1/agents/cameras/");
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", jwt);
 
         using var resp = await http.SendAsync(req, ct);

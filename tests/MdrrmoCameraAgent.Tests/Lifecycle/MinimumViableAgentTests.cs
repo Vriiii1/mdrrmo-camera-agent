@@ -55,7 +55,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
                      .WithHeader("Content-Type", "application/json")
                      .WithBody("\"" + jwt + "\""));
 
-        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat").UsingPost())
+        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat/").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new {
                 ok = true, accepted = 0, rejected = 0 }));
     }
@@ -76,7 +76,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
                      .WithHeader("Content-Type", "application/json")
                      .WithBody("\"" + jwt + "\""));
 
-        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat").UsingPost())
+        _api.Given(Request.Create().WithPath("/api/v1/agents/heartbeat/").UsingPost())
             .RespondWith(Response.Create().WithStatusCode(200).WithBodyAsJson(new {
                 ok = true, accepted = 0, rejected = 0 }));
 
@@ -115,7 +115,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
                 .Should().Be(1);
 
             _api.LogEntries
-                .Count(e => e.RequestMessage?.AbsolutePath == "/api/v1/agents/heartbeat")
+                .Count(e => e.RequestMessage?.AbsolutePath == "/api/v1/agents/heartbeat/")
                 .Should().BeGreaterOrEqualTo(2);
         }
         finally
@@ -184,7 +184,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
         StubBootstrap(jwt);
 
         // Stub GET /api/v1/agents/cameras → 503
-        _api.Given(Request.Create().WithPath("/api/v1/agents/cameras").UsingGet())
+        _api.Given(Request.Create().WithPath("/api/v1/agents/cameras/").UsingGet())
             .RespondWith(Response.Create().WithStatusCode(503).WithBody("Service Unavailable"));
 
         var bundle = new ProvisioningBundle(
@@ -247,7 +247,7 @@ public class MinimumViableAgentTests : IAsyncLifetime
             new { id = "cam-bbb", stream_path = "muni-infanta/cam-bbb", rtsp_url = "rtsp://192.168.1.11:554/stream", whip_url = (string?)null },
         };
 
-        _api.Given(Request.Create().WithPath("/api/v1/agents/cameras").UsingGet())
+        _api.Given(Request.Create().WithPath("/api/v1/agents/cameras/").UsingGet())
             .RespondWith(Response.Create()
                 .WithStatusCode(200)
                 .WithHeader("Content-Type", "application/json")

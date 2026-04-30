@@ -118,6 +118,7 @@ public sealed class MinimumViableAgent
 
         try
         {
+            int hbTick = 0;
             while (!ct.IsCancellationRequested)
             {
                 // ── 6-hour update check ───────────────────────────────────────
@@ -159,6 +160,7 @@ public sealed class MinimumViableAgent
                         }
                     }
 
+                    Console.WriteLine($"[hb-diag] tick #{++hbTick} sending heartbeat");
                     await hbClient.SendAsync(jwt, publishHost.SnapshotHeartbeatPayload(), ct);
                 }
                 catch (OperationCanceledException) { break; }

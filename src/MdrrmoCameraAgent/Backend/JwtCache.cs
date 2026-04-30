@@ -49,6 +49,7 @@ public sealed class JwtCache(Func<CancellationToken, Task<string>> mint)
             _token     = await mint(ct);
             _claims    = JwtClaims.Decode(_token);
             _expiresAt = ReadExp(_token);
+            Console.WriteLine($"[jwt-diag] minted exp={_expiresAt:o} now={DateTimeOffset.UtcNow:o} delta={(_expiresAt - DateTimeOffset.UtcNow).TotalMinutes:F1}min");
 
             if (_claims.UserRole != "camera_agent")
                 throw new InvalidOperationException(
