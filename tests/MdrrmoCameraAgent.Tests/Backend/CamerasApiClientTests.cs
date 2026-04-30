@@ -45,6 +45,40 @@ public class CamerasApiClientTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListAsync_ToleratesOmittedRtspUrl_AndReturnsEmptyString()
+    {
+        // The dashboard GET handler intentionally omits rtsp_url from its
+        // response shape (migration 161 line 27: "RTSP creds NEVER stored
+        // here — agent only"). The agent's local cameras.json cache remains
+        // the authoritative source for RtspUrl; the GET payload only
+        // confirms presence/absence and stream_path. ListAsync must not
+        // throw when rtsp_url is absent; CameraEntry.RtspUrl defaults to "".
+        _s.Given(Request.Create()
+                .WithPath("/api/v1/agents/cameras/")
+                .UsingGet()
+                .WithHeader("Authorization", "Bearer jwt"))
+          .RespondWith(Response.Create().WithStatusCode(200)
+                .WithBodyAsJson(new
+                {
+                    data = new[]
+                    {
+                        new { id = "cam-1", stream_path = "muni-infanta/cam-cam-1" },
+                    },
+                }));
+
+        var c = new CamerasApiClient(new HttpClient { BaseAddress = new Uri(_s.Url!) });
+        var entries = await c.ListAsync(jwt: "jwt", default);
+
+        entries.Should().HaveCount(1);
+        entries[0].Id.Should().Be("cam-1");
+        entries[0].StreamPath.Should().Be("muni-infanta/cam-cam-1");
+        entries[0].RtspUrl.Should().Be("",
+            because: "rtsp_url is absent from the dashboard response and " +
+                     "must default to the empty string, not throw");
+        entries[0].WhipUrl.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ListAsync_RequestUriEndsWithSlash_ToAvoidNextJsRedirect()
     {
         // Regression guard for v0.4.1 Bug #1 (companion to the heartbeat fix).

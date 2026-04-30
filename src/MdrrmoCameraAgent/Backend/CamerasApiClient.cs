@@ -45,7 +45,7 @@ public sealed class CamerasApiClient(HttpClient http)
             .Select(j => new CameraEntry(
                 Id:         j.GetProperty("id").GetString()!,
                 StreamPath: j.GetProperty("stream_path").GetString()!,
-                RtspUrl:    j.GetProperty("rtsp_url").GetString() ?? "",
+                RtspUrl:    j.TryGetProperty("rtsp_url", out var r) ? (r.GetString() ?? "") : "",
                 WhipUrl:    j.TryGetProperty("whip_url", out var w) ? w.GetString() : null))
             .ToList();
     }
