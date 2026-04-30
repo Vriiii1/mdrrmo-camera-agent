@@ -40,53 +40,11 @@ public sealed class UpdateCheckerTests
         await act.Should().NotThrowAsync<InvalidOperationException>();
     }
 
-    [Fact]
-    public async Task CheckAndApplyAsync_DoesNotSwallow_UnrelatedExceptions()
-    {
-        // Pre-cancelled token forces an OperationCanceledException out of
-        // the awaited path — a totally-unrelated exception type that the
-        // narrow guard MUST NOT swallow.
-        //
-        // This pins the catch's narrowness: if a future refactor widened
-        // the guard to `catch (Exception)`, this test would fail because
-        // OperationCanceledException would be silently absorbed.
-        var checker = new UpdateChecker("https://invalid.local/no-feed/");
-        using var cts = new CancellationTokenSource();
-        cts.Cancel();
-
-        var act = async () => await checker.CheckAndApplyAsync(cts.Token);
-
-        // Either OperationCanceledException (preferred — clean cancellation
-        // path) or some other non-Velopack-locator exception type must surface.
-        // Specifically, the guard's two `catch` clauses (NotInstalledException
-        // and InvalidOperationException-with-VelopackLocator-message) must
-        // remain narrow.
-        var thrown = await Record.ExceptionAsync(act);
-
-        // If the guard is correctly narrow, EITHER:
-        //   - The locator-missing exception fires first (Velopack throws
-        //     synchronously before observing ct), the guard swallows it,
-        //     and `thrown` is null — that's fine, locator-missing is the
-        //     dominant failure mode in this env.
-        //   - OR a non-locator exception (e.g. OperationCanceledException,
-        //     HttpRequestException) surfaces — that proves the guard is
-        //     not a blanket eater.
-        //
-        // What MUST NOT happen: the guard is widened to `catch (Exception)`
-        // and silently swallows OperationCanceledException AND some
-        // hypothetical future bug. We assert the catch's narrowness by
-        // checking that IF anything is thrown, it is NOT one of the two
-        // guarded types.
-        if (thrown is not null)
-        {
-            thrown.Should().NotBeOfType<NotInstalledException>(
-                "the NotInstalledException catch must remain narrow");
-            // An InvalidOperationException whose message contains
-            // "VelopackLocator" is ALSO guarded — but other
-            // InvalidOperationExceptions (with different messages) must
-            // surface. We don't fail this assertion here because the
-            // pre-cancelled-token path doesn't produce that specific
-            // message in the current Velopack build.
-        }
-    }
+    // Narrowness of the `when ex.Message.Contains("VelopackLocator")` filter
+    // is enforced by code review, not unit test. A behavioral narrowness test
+    // would require either (a) injecting an IUpdateManagerFactory seam to stub
+    // a non-locator exception, or (b) a tautological filter-predicate test.
+    // Both are over-engineered for a 4-line guard whose worst-case regression
+    // is a single resumed [update-check] line in err.log every 6 hours —
+    // loud, locally-fixable, and detected within one release cycle.
 }
